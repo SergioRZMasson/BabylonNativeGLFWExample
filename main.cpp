@@ -79,13 +79,13 @@ void RefreshBabylon(GLFWwindow *window)
 	int width, height;
 	glfwGetWindowSize(window, &width, &height);
 
-	Babylon::Graphics::WindowConfiguration graphicsConfig{};
-	graphicsConfig.Window = (Babylon::Graphics::WindowType)glfwNativeWindowHandle(window);
+	Babylon::Graphics::Configuration graphicsConfig{};
+	graphicsConfig.Window = (Babylon::Graphics::WindowT)glfwNativeWindowHandle(window);
 	graphicsConfig.Width = width;
 	graphicsConfig.Height = height;
 	graphicsConfig.MSAASamples = 4;
 
-	device = Babylon::Graphics::Device::Create(graphicsConfig);
+	device = std::make_unique<Babylon::Graphics::Device>(graphicsConfig);
 	update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
 	device->StartRenderingCurrentFrame();
 	update->Start();
@@ -116,14 +116,11 @@ void RefreshBabylon(GLFWwindow *window)
 
 	Babylon::ScriptLoader loader{*runtime};
 	loader.Eval("document = {}", "");
-	loader.LoadScript("app:///Scripts/ammo.js");
-	// Commenting out recast.js for now because v8jsi is incompatible with asm.js.
-	// loader.LoadScript("app:///Scripts/recast.js");
+	// Commenting out recast.js for now because v8jsi is ncompatible with asm.js.
 	loader.LoadScript("app:///Scripts/babylon.max.js");
 	loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
 	loader.LoadScript("app:///Scripts/babylonjs.materials.js");
 	loader.LoadScript("app:///Scripts/babylon.gui.js");
-	loader.LoadScript("app:///Scripts/meshwriter.min.js");
 	loader.LoadScript("app:///Scripts/game.js");
 
 	ImGui_ImplBabylon_Init( width , height );
@@ -186,37 +183,24 @@ static void window_resize_callback(GLFWwindow *window, int width, int height)
 	device->UpdateSize(width, height);
 }
 
-static void change_ball_size(float size)
+
+static void decrease_fire_intesnity()
 {
-	runtime->Dispatch([size](Napi::Env env)
+	runtime->Dispatch([](Napi::Env env)
 	{ 
-		env.Global().Get("ChangeBallSize").As<Napi::Function>().Call({Napi::Value::From(env, size)}); 
+		env.Global().Get("decreaseFireSource").As<Napi::Function>().Call({}); 
 	});
 }
 
-static void change_ball_color(ImVec4 color)
+static void increase_fire_intesnity()
 {
-	runtime->Dispatch([color](Napi::Env env)
+	runtime->Dispatch([](Napi::Env env)
 	{ 
-		env.Global().Get("ChangeBallColor").As<Napi::Function>().Call({Napi::Value::From(env, color.x), Napi::Value::From(env, color.y), Napi::Value::From(env, color.z), Napi::Value::From(env, color.w)}); 
+		env.Global().Get("increaseFireSource").As<Napi::Function>().Call({}); 
 	});
 }
 
-static void change_ball_visibility(bool visible)
-{
-	runtime->Dispatch([visible](Napi::Env env)
-	{ 
-		env.Global().Get("SetBallVisible").As<Napi::Function>().Call({Napi::Value::From(env, visible)}); 
-	});
-}
 
-static void change_floor_visibility(bool visible)
-{
-	runtime->Dispatch([visible](Napi::Env env)
-	{ 
-		env.Global().Get("SetFloorVisible").As<Napi::Function>().Call({Napi::Value::From(env, visible)}); 
-	});
-}
 
 int main()
 {
@@ -285,24 +269,14 @@ int main()
 
 			ImGui::Text("Use this controllers to change values in the Babylon scene.");
 
-			if (ImGui::Checkbox("Show ball", &show_ball))
+			if (ImGui::Button("Increase Fire Intensity"))
 			{
-				change_ball_visibility(show_ball);
+				increase_fire_intesnity();
 			}
 
-			if (ImGui::Checkbox("Show floor", &show_floor))
+			if (ImGui::Button("Decrase Fire Intensity"))
 			{
-				change_floor_visibility(show_floor);
-			}
-
-			if (ImGui::SliderFloat("Ball Size", &ballSize, 1.0f, 10.0f))
-			{
-				change_ball_size(ballSize);
-			}
-
-			if (ImGui::ColorEdit3("Ball Color", (float *)&ballColor))
-			{
-				change_ball_color(ballColor);
+				decrease_fire_intesnity();
 			}
 
 			if (ImGui::Button("Resume"))

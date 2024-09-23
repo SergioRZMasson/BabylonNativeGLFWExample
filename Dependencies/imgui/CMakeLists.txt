@@ -49,8 +49,11 @@ target_link_libraries(imgui
     PRIVATE bgfx
     PRIVATE bx)
 
-target_compile_definitions(imgui
-    PRIVATE NOMINMAX)
+if(MSVC)
+    target_compile_definitions(imgui
+        PRIVATE NOMINMAX 
+        PRIVATE "/Zc:preprocessor")
+endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 target_compile_features(imgui PRIVATE cxx_std_17)

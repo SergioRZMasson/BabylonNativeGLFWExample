@@ -1,5 +1,9 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.20.0)
 project(BabylonNativeExample VERSION 0.1.0)
+
+if(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} /W3 /Zc:__cplusplus /Zc:preprocessor")
+endif()
 
 add_subdirectory(Dependencies)
 
@@ -7,6 +11,7 @@ add_executable(BabylonNativeExample main.cpp)
 
 target_link_libraries(BabylonNativeExample 
     PRIVATE AppRuntime
+    PRIVATE GraphicsDevice
     PRIVATE NativeEngine
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
@@ -25,13 +30,10 @@ target_compile_features(BabylonNativeExample PRIVATE cxx_std_17)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/node_modules/babylonjs/babylon.max.js")
     set(BABYLON_SCRIPTS
         "node_modules/babylonjs-loaders/babylonjs.loaders.js"
-        "node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
         "node_modules/babylonjs/babylon.max.js"
-        "node_modules/babylonjs/babylon.max.js.map"
+        "node_modules/babylonjs/babylon.js.map"
         "node_modules/babylonjs-materials/babylonjs.materials.js"
-        "node_modules/babylonjs-materials/babylonjs.materials.js.map"
-        "node_modules/babylonjs-gui/babylon.gui.js"
-        "node_modules/babylonjs-gui/babylon.gui.js.map")
+        "node_modules/babylonjs-gui/babylon.gui.js")
 
     set(SCRIPTS
         "Scripts/game.js"
