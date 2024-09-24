@@ -26,7 +26,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../node_modules/babylonjs/babylon.max.
         "../../node_modules/babylonjs-materials/babylonjs.materials.js"
         "../../node_modules/babylonjs-gui/babylon.gui.js")
 
-    set(SCRIPTS "Scripts/DoomFireJS.js")
+    set(SCRIPTS "Scripts/DoomFireNative.js")
 
     target_sources(DoomFireNative PRIVATE ${BABYLON_SCRIPTS} ${SCRIPTS})
 

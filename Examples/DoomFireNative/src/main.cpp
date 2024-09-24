@@ -42,6 +42,7 @@ std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
 Babylon::Plugins::NativeInput* nativeInput{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool minimized = false;
+std::vector<uint32_t> m_fireIntensityVector;
 
 #define INITIAL_WIDTH 1920
 #define INITIAL_HEIGHT 1080
@@ -99,7 +100,7 @@ public:
 		return MinVal + NextFloat( MaxVal - MinVal );
 	}
 
-	void SetSeed( uint32_t s ) 
+	void SetSeed( uint32_t s )
 	{
 		m_State[0] = s;
 
@@ -160,47 +161,40 @@ __declspec(align(16)) struct Color
 std::vector<Color> fireColorsPalette = { { 7.0f, 7.0f,  7.0f }, {  31.0f, 7.0f,  7.0f }, {  47.0f, 15.0f,  7.0f }, {  71.0f, 15.0f,  7.0f }, {  87.0f, 23.0f,  7.0f }, {  103.0f, 31.0f,  7.0f }, {  119.0f, 31.0f,  7.0f }, {  143.0f, 39.0f,  7.0f }, {  159.0f, 47.0f,  7.0f }, {  175.0f, 63.0f,  7.0f }, {  191.0f, 71.0f,  7.0f }, {  199.0f, 71.0f,  7.0f }, {  223.0f, 79.0f,  7.0f }, {  223.0f, 87.0f,  7.0f }, {  223.0f, 87.0f,  7.0f }, {  215.0f, 95.0f,  7.0f }, {  215.0f, 95.0f,  7.0f }, {  215.0f, 103.0f,  15.0f }, {  207.0f, 111.0f,  15.0f }, {  207.0f, 119.0f,  15.0f }, {  207.0f, 127.0f,  15.0f }, {  207.0f, 135.0f,  23.0f }, {  199.0f, 135.0f,  23.0f }, {  199.0f, 143.0f,  23.0f }, {  199.0f, 151.0f,  31.0f }, {  191.0f, 159.0f,  31.0f }, {  191.0f, 159.0f,  31.0f }, {  191.0f, 167.0f,  39.0f }, {  191.0f, 167.0f,  39.0f }, {  191.0f, 175.0f,  47.0f }, {  183.0f, 175.0f,  47.0f }, {  183.0f, 183.0f,  47.0f }, {  183.0f, 183.0f,  55.0f }, {  207.0f, 207.0f,  111.0f }, {  223.0f, 223.0f,  159.0f }, {  239.0f, 239.0f,  199.0f }, {  255.0f, 255.0f,  255.0f } };
 RandomNumberGenerator generator;
 
-inline void increaseFireSource( Napi::Int32Array& intensityArray, size_t numPerSide )
+inline void increaseFireSource( std::vector<uint32_t>& intensityArray, size_t numPerSide )
 {
-	size_t overflowPixelIndex = numPerSide * numPerSide * numPerSide;// all the pixels of the fire
+	size_t lastInstance = (numPerSide * numPerSide * numPerSide) - 1;
 	size_t sideSquare = numPerSide * numPerSide;
 
-	for( size_t column = 0; column <= numPerSide; column++ )
+	for( int i = 0; i < sideSquare; i++ )
 	{
-		size_t columnDelta = column * numPerSide;
-
-		for( size_t depth = 0; depth <= numPerSide; depth++ )
-		{
-			size_t pixelIndex = (overflowPixelIndex - sideSquare) + columnDelta + depth;   //find last pixel of the colunm
-			int32_t currentFireIntensity = intensityArray[pixelIndex];
-
-			int32_t increase = static_cast<int32_t>(std::floor(generator.NextFloat( ) * 7.0f));
-			int32_t newFireIntensity = std::min( 36, currentFireIntensity + increase );
-			intensityArray[pixelIndex] = newFireIntensity;
-		}
+		size_t instanceIndex = (lastInstance - i);
+		int32_t currentFireIntensity = intensityArray[instanceIndex];
+		int32_t increase = generator.NextInt(0, 7);
+		intensityArray[instanceIndex] = std::min( 36, currentFireIntensity + increase );
 	}
 }
 
-inline void calculateFirePropagation( Napi::Int32Array& intensityArray, size_t numPerSide )
+inline void calculateFirePropagation( std::vector<uint32_t>& intensityArray, size_t numPerSide )
 {
 	auto instanceCount = numPerSide * numPerSide * numPerSide;
 	auto sideSquare = numPerSide * numPerSide;
 
-	for( auto currentPixelIndex = 0; currentPixelIndex < (instanceCount - sideSquare); currentPixelIndex++ )
+	for( auto currentPixelIndex = 1; currentPixelIndex < instanceCount - sideSquare; currentPixelIndex++ )
 	{
-		auto belowPixelIndex = currentPixelIndex + (sideSquare);   // takes the reference value and adds a width
+		auto belowPixelIndex = currentPixelIndex + (sideSquare);
 
-		int32_t decay = static_cast<int32_t>(generator.NextFloat( 2.0f ) );  // fire intensity discount
+		int32_t decay = generator.NextInt( 0, 1 );
 		int32_t belowPixelFireIntensity = intensityArray[belowPixelIndex];
 		int32_t newFireIntensity = std::max( belowPixelFireIntensity - decay, 0 );
-		int32_t direction = static_cast<int32_t>(generator.NextFloat( 2.0f ) ) - 1;
+		int32_t direction = generator.NextInt( 0, 1 ) - 1;
 		direction = std::max( direction, 1 );
 		int32_t decayDirection = decay * direction;
 		intensityArray[currentPixelIndex - decayDirection] = newFireIntensity;
 	}
 }
 
-inline void renderFire( Napi::Float32Array colorData, Napi::Int32Array& intensityArray, int numPerSide )
+inline void renderFire( Napi::Float32Array colorData, std::vector<uint32_t>& intensityArray, int numPerSide )
 {
 	for( size_t instanceID = 0; instanceID < (numPerSide * numPerSide * numPerSide); instanceID++ )
 	{
@@ -214,8 +208,6 @@ inline void renderFire( Napi::Float32Array colorData, Napi::Int32Array& intensit
 	}
 }
 }
-
-
 
 void Uninitialize()
 {
@@ -255,16 +247,21 @@ void RefreshBabylon( GLFWwindow* window )
 
 	runtime->Dispatch( []( Napi::Env env )
 	{
+		// Create global functions that JS can call to perform calculations.
+		env.Global().Set( "createNativeBuffers", Napi::Function::New( env, []( const Napi::CallbackInfo& info )
+		{
+			int bufferSize = info[0].As<Napi::Number>();
+			m_fireIntensityVector.resize(bufferSize);
+		} 
+		) );
+
 		env.Global().Set( "nativeUpdate", Napi::Function::New( env, []( const Napi::CallbackInfo& info )
 		{
 			auto colorArray = info[0].As<Napi::Float32Array>();
-			auto intensityArray = info[1].As<Napi::Int32Array>();
-			int numPerSide = info[2].As<Napi::Number>();
-
-			DoomFire::increaseFireSource( intensityArray, numPerSide );
-			DoomFire::calculateFirePropagation( intensityArray, numPerSide );
-			DoomFire::renderFire( colorArray, intensityArray, numPerSide );
-
+			int numPerSide = info[1].As<Napi::Number>();
+			DoomFire::increaseFireSource( m_fireIntensityVector, numPerSide );
+			DoomFire::calculateFirePropagation( m_fireIntensityVector, numPerSide );
+			DoomFire::renderFire( colorArray, m_fireIntensityVector, numPerSide );
 		} ) );
 
 		device->AddToJavaScript( env );
@@ -289,13 +286,16 @@ void RefreshBabylon( GLFWwindow* window )
 	} );
 
 	Babylon::ScriptLoader loader{ *runtime };
+	
+	// Load Babylon.js infrastructure.
 	loader.Eval( "document = {}", "" );
-	// Commenting out recast.js for now because v8jsi is ncompatible with asm.js.
 	loader.LoadScript( "app:///Scripts/babylon.max.js" );
 	loader.LoadScript( "app:///Scripts/babylonjs.loaders.js" );
 	loader.LoadScript( "app:///Scripts/babylonjs.materials.js" );
 	loader.LoadScript( "app:///Scripts/babylon.gui.js" );
-	loader.LoadScript( "app:///Scripts/DoomFireJS.js" );
+	
+	// Load our application script.
+	loader.LoadScript( "app:///Scripts/DoomFireNative.js" );
 
 	ImGui_ImplBabylon_Init( width, height );
 }
@@ -355,23 +355,6 @@ void scroll_callback( GLFWwindow* window, double xoffset, double yoffset )
 static void window_resize_callback( GLFWwindow* window, int width, int height )
 {
 	device->UpdateSize( width, height );
-}
-
-
-static void decrease_fire_intesnity()
-{
-	runtime->Dispatch( []( Napi::Env env )
-	{
-		env.Global().Get( "decreaseFireSource" ).As<Napi::Function>().Call( {} );
-	} );
-}
-
-static void increase_fire_intesnity()
-{
-	runtime->Dispatch( []( Napi::Env env )
-	{
-		env.Global().Get( "increaseFireSource" ).As<Napi::Function>().Call( {} );
-	} );
 }
 
 int main()
@@ -437,19 +420,9 @@ int main()
 
 			static float ballSize = 1.0f;
 
-			ImGui::Begin( "Scene Editor Example" );
+			ImGui::Begin( "DOOM Fire Native" );
 
 			ImGui::Text( "Use this controllers to change values in the Babylon scene." );
-
-			if( ImGui::Button( "Increase Fire Intensity" ) )
-			{
-				increase_fire_intesnity();
-			}
-
-			if( ImGui::Button( "Decrase Fire Intensity" ) )
-			{
-				decrease_fire_intesnity();
-			}
 
 			if( ImGui::Button( "Resume" ) )
 			{
