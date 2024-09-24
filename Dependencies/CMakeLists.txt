@@ -16,6 +16,7 @@ set_property(TARGET AppRuntime PROPERTY FOLDER Dependencies/BabylonNative/Core/)
 set_property(TARGET Graphics PROPERTY FOLDER Dependencies/BabylonNative/Core/)
 set_property(TARGET JsRuntime PROPERTY FOLDER Dependencies/BabylonNative/Core/)
 set_property(TARGET ScriptLoader PROPERTY FOLDER Dependencies/BabylonNative/Core/)
+set_property(TARGET Foundation PROPERTY FOLDER Dependencies/BabylonNative/Core/)
 
 # Babylon Native Plugins
 if(BABYLON_NATIVE_PLUGIN_CHROMEDEVTOOLS)
@@ -59,20 +60,36 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (WIN32 OR ANDROID OR IOS))
 endif()
 
 # Babylon Native polyfills
-if(BABYLON_NATIVE_POLYFILL_CONSOLE)
-    set_property(TARGET Console PROPERTY FOLDER Dependencies/BabylonNative/Polyfills/)
-endif()
-
 if(BABYLON_NATIVE_POLYFILL_WINDOW)
     set_property(TARGET Window PROPERTY FOLDER Dependencies/BabylonNative/Polyfills/)
 endif()
 
-if(BABYLON_NATIVE_POLYFILL_XMLHTTPREQUEST)
-    set_property(TARGET XMLHttpRequest PROPERTY FOLDER Dependencies/BabylonNative/Polyfills/)
-endif()
-
 if(BABYLON_NATIVE_POLYFILL_CANVAS)
     set_property(TARGET Canvas PROPERTY FOLDER Dependencies/BabylonNative/Polyfills/)
+endif()
+
+if(JSRUNTIMEHOST_POLYFILL_CONSOLE)
+    set_property(TARGET Console PROPERTY FOLDER Dependencies/BabylonNative/Polyfills/)
+endif()
+
+if(JSRUNTIMEHOST_POLYFILL_SCHEDULING)
+    set_property(TARGET Scheduling PROPERTY FOLDER Dependencies/BabylonNative/Polyfills/)
+endif()
+
+if(JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER)
+    set_property(TARGET AbortController PROPERTY FOLDER Dependencies/BabylonNative/Polyfills/)
+endif()
+
+if(JSRUNTIMEHOST_POLYFILL_URL)
+    set_property(TARGET URL PROPERTY FOLDER Dependencies/BabylonNative/Polyfills/)
+endif()
+
+if(JSRUNTIMEHOST_POLYFILL_WEBSOCKET)
+    set_property(TARGET WebSocket PROPERTY FOLDER Dependencies/BabylonNative/Polyfills/)
+endif()
+
+if(JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)
+    set_property(TARGET XMLHttpRequest PROPERTY FOLDER Dependencies/BabylonNative/Polyfills/)
 endif()
 
 add_subdirectory(imgui)
