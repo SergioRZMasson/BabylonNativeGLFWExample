@@ -42,36 +42,11 @@ box.material.emissiveColor = BABYLON.Color3.White();
 
 //JS update functions
 scene.onBeforeCameraRenderObservable.add(() => {
-    increaseFireSource();
-    calculateFirePropagation();
-    renderFire(box);
+
+    nativeUpdate(colorData, fireIntensityData, numPerSide);
+    box.thinInstanceSetBuffer("color", colorData, 4);
+    box.thinInstanceBufferUpdated("color");
 });
-
-function calculateFirePropagation() {
-    for (let i = 0; i < instanceCount; i++) {
-        updateFireIntensityPerPixel(i)
-    }
-}
-
-function updateFireIntensityPerPixel(currentPixelIndex) {
-
-    const belowPixelIndex = currentPixelIndex + (numPerSide * numPerSide)   // takes the reference value and adds a width
-
-    if (belowPixelIndex >= numPerSide * numPerSide * numPerSide) {
-        return
-    }
-
-    const decay = Math.floor(Math.random() * 2)  // fire intensity discount
-    const belowPixelFireIntensity = fireIntensityData[belowPixelIndex]
-
-    const newFireIntensity =
-        belowPixelFireIntensity - decay >= 0 ? belowPixelFireIntensity - decay : 0  // don't show negative numbers
-
-    let direction = Math.floor(Math.random() * 2) - 1;
-    direction = (direction == 0) ? 1 : direction;
-    const decayDirection = decay * direction;
-    fireIntensityData[currentPixelIndex - decayDirection] = newFireIntensity
-}
 
 function createCubes() {
     var col = 0, index = 0;
@@ -88,41 +63,6 @@ function createCubes() {
                 colorData[index * 4 + 2] = 0;
                 colorData[index * 4 + 3] = 1.0;
                 index++;
-            }
-        }
-    }
-}
-
-function renderFire(box) {
-    for (let instanceID = 0; instanceID < instanceCount; instanceID++) {
-
-        let fireIntensity = fireIntensityData[instanceID];
-        let fireColor = fireColorsPalette[fireIntensity];
-
-        colorData[instanceID * 4 + 0] = fireColor.r / 255;
-        colorData[instanceID * 4 + 1] = fireColor.g / 255;
-        colorData[instanceID * 4 + 2] = fireColor.b / 255;
-        //colorData[instanceID * 4 + 3] = 1 - (fireColor.r / 255);
-    }
-
-    box.thinInstanceSetBuffer("color", colorData, 4);
-    box.thinInstanceBufferUpdated("color");
-}
-
-function increaseFireSource() {
-    const overflowPixelIndex = numPerSide * numPerSide * numPerSide;// all the pixels of the fire
-
-    for (let column = 0; column <= numPerSide; column++) {
-        for (let depth = 0; depth <= numPerSide; depth++) {
-
-            const pixelIndex = (overflowPixelIndex - numPerSide * numPerSide) + (column * numPerSide) + depth;   //find last pixel of the colunm
-
-            const currentFireIntensity = fireIntensityData[pixelIndex]
-
-            if (currentFireIntensity < 36) {
-                const increase = Math.floor(Math.random() * 7)
-                const newFireIntensity = currentFireIntensity + increase >= 36 ? 36 : currentFireIntensity + increase;
-                fireIntensityData[pixelIndex] = newFireIntensity;
             }
         }
     }
