@@ -9,6 +9,9 @@ set_property(TARGET glfw PROPERTY FOLDER Dependencies/glfw)
 set_property(TARGET update_mappings PROPERTY FOLDER Dependencies/glfw)
 
 set(BABYLON_NATIVE_BUILD_APPS OFF)
+# We need a very big Vertex buffer to update all our instances data.
+add_compile_definitions(BGFX_CONFIG_TRANSIENT_VERTEX_BUFFER_SIZE=160000000)
+
 add_subdirectory(BabylonNative)
 
 # Babylon Native Core
