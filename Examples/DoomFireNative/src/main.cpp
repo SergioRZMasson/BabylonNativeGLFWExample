@@ -44,6 +44,10 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool minimized = false;
 std::vector<uint32_t> m_fireIntensityVector;
 
+int32_t WIND_STRENGHT = 1;
+int32_t FIRE_DECAY = 1;
+int32_t INSTANCES_COUNT = 0;
+
 #define INITIAL_WIDTH 1920
 #define INITIAL_HEIGHT 1080
 
@@ -170,7 +174,7 @@ inline void increaseFireSource( std::vector<uint32_t>& intensityArray, size_t nu
 	{
 		size_t instanceIndex = (lastInstance - i);
 		int32_t currentFireIntensity = intensityArray[instanceIndex];
-		int32_t increase = generator.NextInt(0, 7);
+		int32_t increase = generator.NextInt( 0, 7 );
 		intensityArray[instanceIndex] = std::min( 36, currentFireIntensity + increase );
 	}
 }
@@ -184,10 +188,10 @@ inline void calculateFirePropagation( std::vector<uint32_t>& intensityArray, siz
 	{
 		auto belowPixelIndex = currentPixelIndex + (sideSquare);
 
-		int32_t decay = generator.NextInt( 0, 1 );
+		int32_t decay = generator.NextInt( 0, FIRE_DECAY );
 		int32_t belowPixelFireIntensity = intensityArray[belowPixelIndex];
 		int32_t newFireIntensity = std::max( belowPixelFireIntensity - decay, 0 );
-		int32_t direction = generator.NextInt( 0, 1 ) - 1;
+		int32_t direction = generator.NextInt( 0, WIND_STRENGHT ) - 1;
 		direction = std::max( direction, 1 );
 		int32_t decayDirection = decay * direction;
 		intensityArray[currentPixelIndex - decayDirection] = newFireIntensity;
@@ -250,9 +254,10 @@ void RefreshBabylon( GLFWwindow* window )
 		// Create global functions that JS can call to perform calculations.
 		env.Global().Set( "createNativeBuffers", Napi::Function::New( env, []( const Napi::CallbackInfo& info )
 		{
-			int bufferSize = info[0].As<Napi::Number>();
-			m_fireIntensityVector.resize(bufferSize);
-		} 
+			int instancesPerSide = info[0].As<Napi::Number>();
+			INSTANCES_COUNT = instancesPerSide;
+			m_fireIntensityVector.resize( instancesPerSide * instancesPerSide * instancesPerSide );
+		}
 		) );
 
 		env.Global().Set( "nativeUpdate", Napi::Function::New( env, []( const Napi::CallbackInfo& info )
@@ -286,14 +291,14 @@ void RefreshBabylon( GLFWwindow* window )
 	} );
 
 	Babylon::ScriptLoader loader{ *runtime };
-	
+
 	// Load Babylon.js infrastructure.
 	loader.Eval( "document = {}", "" );
 	loader.LoadScript( "app:///Scripts/babylon.max.js" );
 	loader.LoadScript( "app:///Scripts/babylonjs.loaders.js" );
 	loader.LoadScript( "app:///Scripts/babylonjs.materials.js" );
 	loader.LoadScript( "app:///Scripts/babylon.gui.js" );
-	
+
 	// Load our application script.
 	loader.LoadScript( "app:///Scripts/DoomFireNative.js" );
 
@@ -346,15 +351,21 @@ static void cursor_position_callback( GLFWwindow* window, double xpos, double yp
 
 void scroll_callback( GLFWwindow* window, double xoffset, double yoffset )
 {
-	if( s_showImgui )
-		return;
-
 	nativeInput->MouseWheel( Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, static_cast<int>(-yoffset * 100.0) );
 }
 
 static void window_resize_callback( GLFWwindow* window, int width, int height )
 {
 	device->UpdateSize( width, height );
+}
+
+static void change_instances_count()
+{
+	runtime->Dispatch( []( Napi::Env env )
+	{
+		auto function = env.Global().Get( "resetInstancesPerSide" ).As<Napi::Function>();
+		function.Call( { Napi::Number::New( env, INSTANCES_COUNT ) } );
+	} );
 }
 
 int main()
@@ -365,7 +376,7 @@ int main()
 	glfwWindowHint( GLFW_CLIENT_API, GLFW_NO_API );
 	glfwWindowHint( GLFW_MAXIMIZED, GLFW_TRUE );
 
-	auto window = glfwCreateWindow( INITIAL_WIDTH, INITIAL_HEIGHT, "Simple example", NULL, NULL );
+	auto window = glfwCreateWindow( INITIAL_WIDTH, INITIAL_HEIGHT, "DOOM Fire Native Example", NULL, NULL );
 
 	if( !window )
 	{
@@ -414,29 +425,21 @@ int main()
 		ImGui_ImplBabylon_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 
-		if( s_showImgui )
+		ImGui::NewFrame();
+
+		static float ballSize = 1.0f;
+		ImGui::Begin( "DOOM Fire Native" );
+		ImGui::SliderInt( "Wind", &WIND_STRENGHT, 0, 10 );
+		ImGui::SliderInt( "Fire decay", &FIRE_DECAY, 1, 10 );
+		if( ImGui::SliderInt( "Instances per side", &INSTANCES_COUNT, 0, 100 ) )
 		{
-			ImGui::NewFrame();
-
-			static float ballSize = 1.0f;
-
-			ImGui::Begin( "DOOM Fire Native" );
-
-			ImGui::Text( "Use this controllers to change values in the Babylon scene." );
-
-			if( ImGui::Button( "Resume" ) )
-			{
-				s_showImgui = false;
-			}
-
-			ImGui::SameLine();
-
-			ImGui::Text( "Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate );
-			ImGui::End();
-
-			ImGui::Render();
-			ImGui_ImplBabylon_RenderDrawData( ImGui::GetDrawData() );
+			change_instances_count();
 		}
+		ImGui::Text( "Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate );
+		ImGui::End();
+
+		ImGui::Render();
+		ImGui_ImplBabylon_RenderDrawData( ImGui::GetDrawData() );
 	}
 
 	Uninitialize();
